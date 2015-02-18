@@ -1,0 +1,1 @@
+/usr/bin/c++   -g    CMakeFiles/Avatar.dir/src/main.cpp.o CMakeFiles/Avatar.dir/src/gl_objects.cpp.o CMakeFiles/Avatar.dir/src/avatar.cpp.o  -o Avatar  -L"/home/isoard/Documents/Cours/Projet SDL/Avatar/lib" -rdynamic -Wl,-Bstatic -lSDLmain -Wl,-Bdynamic -lSDL -lpthread -lSDL_image -lGLU -lGLEW -lGL -lglut -Wl,-rpath,"/home/isoard/Documents/Cours/Projet SDL/Avatar/lib" 

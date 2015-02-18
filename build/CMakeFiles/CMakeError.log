@@ -1,0 +1,53 @@
+Determining if the pthread_create exist failed with the following output:
+Change Dir: /home/isoard/Documents/Cours/Projet SDL/Avatar/build/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec2041414572/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec2041414572.dir/build.make CMakeFiles/cmTryCompileExec2041414572.dir/build
+make[1]: Entering directory `/home/isoard/Documents/Cours/Projet SDL/Avatar/build/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report "/home/isoard/Documents/Cours/Projet SDL/Avatar/build/CMakeFiles/CMakeTmp/CMakeFiles" 1
+Building C object CMakeFiles/cmTryCompileExec2041414572.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -o CMakeFiles/cmTryCompileExec2041414572.dir/CheckSymbolExists.c.o   -c "/home/isoard/Documents/Cours/Projet SDL/Avatar/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c"
+Linking C executable cmTryCompileExec2041414572
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec2041414572.dir/link.txt --verbose=1
+/usr/bin/cc       CMakeFiles/cmTryCompileExec2041414572.dir/CheckSymbolExists.c.o  -o cmTryCompileExec2041414572 -rdynamic 
+CMakeFiles/cmTryCompileExec2041414572.dir/CheckSymbolExists.c.o: In function `main':
+CheckSymbolExists.c:(.text+0x16): undefined reference to `pthread_create'
+collect2: error: ld returned 1 exit status
+make[1]: *** [cmTryCompileExec2041414572] Error 1
+make[1]: Leaving directory `/home/isoard/Documents/Cours/Projet SDL/Avatar/build/CMakeFiles/CMakeTmp'
+make: *** [cmTryCompileExec2041414572/fast] Error 2
+
+File /home/isoard/Documents/Cours/Projet SDL/Avatar/build/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/isoard/Documents/Cours/Projet SDL/Avatar/build/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec2619226698/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec2619226698.dir/build.make CMakeFiles/cmTryCompileExec2619226698.dir/build
+make[1]: Entering directory `/home/isoard/Documents/Cours/Projet SDL/Avatar/build/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report "/home/isoard/Documents/Cours/Projet SDL/Avatar/build/CMakeFiles/CMakeTmp/CMakeFiles" 1
+Building C object CMakeFiles/cmTryCompileExec2619226698.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTryCompileExec2619226698.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-2.8/Modules/CheckFunctionExists.c
+Linking C executable cmTryCompileExec2619226698
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec2619226698.dir/link.txt --verbose=1
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTryCompileExec2619226698.dir/CheckFunctionExists.c.o  -o cmTryCompileExec2619226698 -rdynamic -lpthreads 
+/usr/bin/ld: cannot find -lpthreads
+collect2: error: ld returned 1 exit status
+make[1]: *** [cmTryCompileExec2619226698] Error 1
+make[1]: Leaving directory `/home/isoard/Documents/Cours/Projet SDL/Avatar/build/CMakeFiles/CMakeTmp'
+make: *** [cmTryCompileExec2619226698/fast] Error 2
+
+

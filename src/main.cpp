@@ -1,9 +1,10 @@
-#include <QCoreApplication>
+#include <iostream>
 #include "avatar.h"
 
 int main(int argc, char *argv[])
 {
-    Avatar theAvatar;
+	std::cout << "\nThe Avatar Project!" << std::endl;
 
+    CAvatar theAvatar;
     return theAvatar.OnExecute();
 }
