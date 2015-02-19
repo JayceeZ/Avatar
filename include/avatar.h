@@ -2,12 +2,13 @@
 #define _AVATAR_H_
 
 #include <SDL/SDL.h>
+#include "events.h"
 
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
 
-class CAvatar
+class CAvatar : public CEvent
 {
 
 bool should_be_running;
@@ -49,7 +50,11 @@ public:
     void OnLoop();
     void OnRender();
 
-    void OnEvent(SDL_Event*);
+    void OnEvent(SDL_Event* Event);
+    void OnKeyDown(SDLKey sym, SDLMod mod, Uint16 unicode);
+    void OnResize(int w, int h);
+    void OnExpose();
+    void OnExit();
 
     void InitSceneConstants();
 };
