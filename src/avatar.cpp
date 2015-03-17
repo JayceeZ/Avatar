@@ -1,4 +1,5 @@
 #include "avatar.h"
+#include "surface.h"
 #include "gl_objects.h"
 #include <iostream>
 
@@ -12,20 +13,25 @@
 #define RDR_FRAME_LENGTH 1
 #define RDR_CUBE_HALF_SIDE 0.5
 
+#define TEST_TEXTURE1 "../images/companion_cube_face.bmp"
+#define TEST_TEXTURE2 "../images/companion_cube_face2.bmp"
+
 CAvatar::CAvatar() {
     should_be_running = false;
     needs_rendering = true;
+
     window_width = 0;
     window_height = 0;
     window_title = "";
 
+    // Repère du monde
     world_origin_x = 0;
     world_origin_y = 0;
     world_origin_z = 0;
 
+    // Camera
     camera_aspect_ratio = 0;
     camera_fovy = 0;
-
     camera_tx = 0;
     camera_ty = 0;
     camera_tz = 0;
@@ -34,12 +40,19 @@ CAvatar::CAvatar() {
     camera_max_z = 0;
 
     camera_min_tz = 0;
+
+    // Texture de test
+    surface_test = NULL;
+    surface_test2 = NULL;
+    texture_test_id = 0;
+    texture_test2_id = 0;
 }
 
 CAvatar::~CAvatar() {}
 
 int CAvatar::OnExecute() {
     if(OnInit() == false) {
+        std::cout << "Initialization failed !" << std::endl;
         return -1;
     }
 
@@ -58,6 +71,7 @@ int CAvatar::OnExecute() {
     }
     OnCleanup();
 
+    std::cout << "Application ended normally." << std::endl;
     return 0;
 }
 
@@ -85,32 +99,56 @@ bool CAvatar::OnInit()
 
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
     SDL_GL_SetAttribute(SDL_GL_BUFFER_SIZE, 32);
-/*
+
     SDL_GL_SetAttribute(SDL_GL_ACCUM_RED_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_ACCUM_GREEN_SIZE,8);
     SDL_GL_SetAttribute(SDL_GL_ACCUM_BLUE_SIZE,8);
     SDL_GL_SetAttribute(SDL_GL_ACCUM_ALPHA_SIZE,8);
-*/
+
+    /*
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);
-
+    */
 
     sdl_pimage = SDL_SetVideoMode(window_width, window_height, SDL_DEPTH, SDL_VIDEO_MODE_OPTIONS);
 
     if(sdl_pimage == NULL) {
+        std::cout << "Drawing window have not been initialized correcly." << std::endl;
         return false;
     }
-    return true;
 
+    // Texture test loading code
+    glEnable(GL_TEXTURE_2D);
+    if((surface_test = CSurface::OnLoad(TEST_TEXTURE1)) == NULL) {
+        std::cout << "Test texture file have not been loaded correctly." << std::endl;
+        return false;
+    }
+    texture_test_id = Load2DTexture(surface_test->w, surface_test->h, surface_test->format->BytesPerPixel, surface_test->pixels);
+    if((surface_test2 = CSurface::OnLoad(TEST_TEXTURE2)) == NULL) {
+        std::cout << "Test texture file 2 have not been loaded correctly." << std::endl;
+        return false;
+    }
+    texture_test2_id = Load2DTexture(surface_test2->w, surface_test2->h, surface_test2->format->BytesPerPixel, surface_test2->pixels);
+
+    // TODO: Determiner l'usage de ces deux fonctions
     glClearColor(0,0,0,0);
     glViewport(0,0,window_width, window_height);
 
+    // Lumières
+    glEnable(GL_LIGHTING);
+    glShadeModel(GL_SMOOTH);
+    glEnable(GL_LIGHT0);
+
+    // Paramètres caméra
     camera_aspect_ratio = ((float) window_width) / ((float) window_height);
     camera_min_z = 0.1;
     camera_max_z = 10;
     camera_fovy = 60;
 
+    InitSceneConstants();
     InitProjectionMatrix();
+
+    return true;
 }
 
 void CAvatar::InitProjectionMatrix() {
@@ -132,6 +170,7 @@ void CAvatar::OnLoop()
 
 void CAvatar::OnRender()
 {
+    // Condition d'exécution du contenu de cette méthode
     if(!needs_rendering)
         return;
     needs_rendering = false;
@@ -148,10 +187,16 @@ void CAvatar::OnRender()
     glTranslatef(-camera_tx, -camera_ty, -camera_tz);
     glRotatef(world_rx, 1, 0, 0);
     glRotatef(world_ry, 0, 1, 0);
-    glMultMatrixf(scaling);
+    //glMultMatrixf(scaling);
+
+    // Lumière
+    GLfloat light_position[] = { camera_tx, camera_ty, camera_tz, 1.0 };
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
     DrawFrame(world_origin_x, world_origin_y, world_origin_z, RDR_FRAME_LENGTH);
-    DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE);
+    //DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE);
+    GLuint textures[] = { texture_test_id, texture_test2_id };
+    DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE, textures);
 
     SDL_GL_SwapBuffers();
 }
@@ -235,6 +280,33 @@ void CAvatar::OnKeyDown(SDLKey sym, SDLMod mod, Uint16 unicode) {
         needs_rendering = true;
         break;
     }
+}
+
+void CAvatar::OnMouseMove(int mX, int mY, int relX, int relY, bool Left, bool Right, bool Middle) {
+    if(Left) {
+        // Translation
+        camera_tx -= CAMERA_TRANSLATION_STEP*relX/16;
+        camera_ty += CAMERA_TRANSLATION_STEP*relY/16;
+    }
+    if(Right) {
+        // Rotation
+        world_rx += SCENE_ROTATION_STEP*relY/16;
+        if(world_rx > 360 || world_rx < -360)
+            world_rx = 0;
+        world_ry += SCENE_ROTATION_STEP*relX/16;
+        if(world_ry > 360 || world_ry < -360)
+            world_ry = 0;
+    }
+    needs_rendering = true;
+}
+
+void CAvatar::OnMouseWheel(bool Up, bool Down) {
+    if(Up) {
+        camera_tz -= CAMERA_TRANSLATION_STEP;
+    } else {
+        camera_tz += CAMERA_TRANSLATION_STEP;
+    }
+    needs_rendering = true;
 }
 
 void CAvatar::OnResize(int w, int h) {
