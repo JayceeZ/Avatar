@@ -189,14 +189,14 @@ void CAvatar::OnRender()
     glRotatef(world_ry, 0, 1, 0);
     //glMultMatrixf(scaling);
 
-    // Lumière
-    GLfloat light_position[] = { camera_tx, camera_ty, camera_tz, 1.0 };
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-
     DrawFrame(world_origin_x, world_origin_y, world_origin_z, RDR_FRAME_LENGTH);
     //DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE);
     GLuint textures[] = { texture_test_id, texture_test2_id };
     DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE, textures);
+
+    // Lumière
+    GLfloat light_position[] = { 0.0, 0.0, 10.0, 1.0 };
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
     SDL_GL_SwapBuffers();
 }
