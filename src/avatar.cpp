@@ -46,12 +46,15 @@ CAvatar::CAvatar() {
     surface_test2 = NULL;
     texture_test_id = 0;
     texture_test2_id = 0;
+
+    // Mode
+    mode_sensor = false;
 }
 
 CAvatar::~CAvatar() {}
 
-int CAvatar::OnExecute() {
-    if(OnInit() == false) {
+int CAvatar::OnExecute(bool with_sensor) {
+    if(OnInit(with_sensor) == false) {
         std::cout << "Initialization failed !" << std::endl;
         return -1;
     }
@@ -75,7 +78,7 @@ int CAvatar::OnExecute() {
     return 0;
 }
 
-bool CAvatar::OnInit()
+bool CAvatar::OnInit(bool with_sensor)
 {
     char sdl_wdw_pos[] = "SDL_VIDEO_WINDOW_POS";
     char sdl_wdw_ctr[] = "SDL_VIDEO_CENTERED=1";
@@ -117,27 +120,9 @@ bool CAvatar::OnInit()
         return false;
     }
 
-    // Texture test loading code
-    glEnable(GL_TEXTURE_2D);
-    if((surface_test = CSurface::OnLoad(TEST_TEXTURE1)) == NULL) {
-        std::cout << "Test texture file have not been loaded correctly." << std::endl;
-        return false;
-    }
-    texture_test_id = Load2DTexture(surface_test->w, surface_test->h, surface_test->format->BytesPerPixel, surface_test->pixels);
-    if((surface_test2 = CSurface::OnLoad(TEST_TEXTURE2)) == NULL) {
-        std::cout << "Test texture file 2 have not been loaded correctly." << std::endl;
-        return false;
-    }
-    texture_test2_id = Load2DTexture(surface_test2->w, surface_test2->h, surface_test2->format->BytesPerPixel, surface_test2->pixels);
-
     // TODO: Determiner l'usage de ces deux fonctions
     glClearColor(0,0,0,0);
     glViewport(0,0,window_width, window_height);
-
-    // Lumières
-    glEnable(GL_LIGHTING);
-    glShadeModel(GL_SMOOTH);
-    glEnable(GL_LIGHT0);
 
     // Paramètres caméra
     camera_aspect_ratio = ((float) window_width) / ((float) window_height);
@@ -145,16 +130,37 @@ bool CAvatar::OnInit()
     camera_max_z = 10;
     camera_fovy = 60;
 
+    if(with_sensor) {
+        if(sensor.OnInit(true)) {
+            std::cout << "Mode Sensor" << std::endl;
+            mode_sensor = true;
+        } else {
+            std::cout << "Error initializing sensor: Mode Demo" << std::endl;
+        }
+    } else {
+        std::cout << "Mode Demo" << std::endl;
+    }
+
     InitSceneConstants();
-    InitProjectionMatrix();
+
+    if(mode_sensor)
+        InitModeSensor();
+    else
+        InitModeDemo();
 
     return true;
 }
 
-void CAvatar::InitProjectionMatrix() {
+void CAvatar::SetPerspectiveProjectionMatrix() {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluPerspective(camera_fovy, camera_aspect_ratio, camera_min_z, camera_max_z);
+}
+
+void CAvatar::SetOrthoProjectionMatrix() {
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0, 1, 0, 1, -10, 10);
 }
 
 void CAvatar::OnCleanup() {
@@ -168,19 +174,44 @@ void CAvatar::OnLoop()
 
 }
 
-void CAvatar::OnRender()
-{
-    // Condition d'exécution du contenu de cette méthode
-    if(!needs_rendering)
-        return;
-    needs_rendering = false;
+void CAvatar::InitSceneConstants() {
+    world_rx = 0;
+    world_ry = 0;
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    camera_min_tz = world_origin_z + CAMERA_Z_OFFSET;
+    camera_tx = world_origin_x;
+    camera_ty = world_origin_y;
+    camera_tz = camera_min_tz;
+}
+
+void CAvatar::InitModeDemo() {
+    SetPerspectiveProjectionMatrix();
+
+    // Lumières
+    glEnable(GL_LIGHTING);
+    glShadeModel(GL_SMOOTH);
+    glEnable(GL_LIGHT0);
+
+    // Texture test loading code
+    glEnable(GL_TEXTURE_2D);
+    if((surface_test = CSurface::OnLoad(TEST_TEXTURE1)) == NULL) {
+        std::cout << "Test texture file have not been loaded correctly." << std::endl;
+        return;
+    }
+    texture_test_id = Load2DTexture(surface_test->w, surface_test->h, surface_test->format->BytesPerPixel, surface_test->pixels);
+    if((surface_test2 = CSurface::OnLoad(TEST_TEXTURE2)) == NULL) {
+        std::cout << "Test texture file 2 have not been loaded correctly." << std::endl;
+        return;
+    }
+    texture_test2_id = Load2DTexture(surface_test2->w, surface_test2->h, surface_test2->format->BytesPerPixel, surface_test2->pixels);
+}
+
+void CAvatar::DrawDemo() {
     glEnable(GL_DEPTH_TEST);
-    GLfloat scaling[] = {1, 0, 0, 0,
-                         0, 1.5, 0, 0,
-                         0, 0, 1, 0,
-                         0, 0, 0, 1};
+    //GLfloat scaling[] = {1, 0, 0, 0,
+    //                     0, 1.5, 0, 0,
+    //                     0, 0, 1, 0,
+    //                     0, 0, 0, 1};
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -190,13 +221,53 @@ void CAvatar::OnRender()
     //glMultMatrixf(scaling);
 
     DrawFrame(world_origin_x, world_origin_y, world_origin_z, RDR_FRAME_LENGTH);
-    //DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE);
     GLuint textures[] = { texture_test_id, texture_test2_id };
     DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE, textures);
 
     // Lumière
     GLfloat light_position[] = { 0.0, 0.0, 10.0, 1.0 };
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+}
+
+
+void CAvatar::InitModeSensor() {
+    // Initialisations des attributs pour sensor
+    SetOrthoProjectionMatrix();
+}
+
+void CAvatar::DrawSensor() {
+    // Untested code
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    openni::VideoFrameRef m_colorFrame;
+
+    sensor.m_colorStream.readFrame(&m_colorFrame);
+    if(!m_colorFrame.isValid())
+        return;
+
+    const openni::RGB888Pixel* pImage = (const openni::RGB888Pixel*) m_colorFrame.getData();
+
+    GLuint texture_id = Load2DTexture(m_colorFrame.getWidth(), m_colorFrame.getHeight(), 3, pImage);
+    FillWindowWithTexture(texture_id);
+
+    glDeleteTextures(1, &texture_id);
+}
+
+
+void CAvatar::OnRender()
+{
+    // Condition d'exécution du contenu de cette méthode
+    if(!needs_rendering)
+        return;
+    needs_rendering = false;
+
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if(mode_sensor)
+        DrawSensor();
+    else
+        DrawDemo();
 
     SDL_GL_SwapBuffers();
 }
@@ -205,14 +276,61 @@ void CAvatar::OnEvent(SDL_Event* Event) {
     CEvent::OnEvent(Event);
 }
 
-void CAvatar::InitSceneConstants() {
-    world_rx = 0;
-    world_ry = 0;
+void CAvatar::OnMouseMove(int mX, int mY, int relX, int relY, bool Left, bool Right, bool Middle) {
+    if(Left) {
+        // Translation
+        camera_tx -= CAMERA_TRANSLATION_STEP*relX/16;
+        camera_ty += CAMERA_TRANSLATION_STEP*relY/16;
+    }
+    if(Right) {
+        // Rotation
+        world_rx += SCENE_ROTATION_STEP*relY/16;
+        if(world_rx > 360 || world_rx < -360)
+            world_rx = 0;
+        world_ry += SCENE_ROTATION_STEP*relX/16;
+        if(world_ry > 360 || world_ry < -360)
+            world_ry = 0;
+    }
+    needs_rendering = true;
+}
 
-    camera_min_tz = world_origin_z + CAMERA_Z_OFFSET;
-    camera_tx = world_origin_x;
-    camera_ty = world_origin_y;
-    camera_tz = camera_min_tz;
+void CAvatar::OnMouseWheel(bool Up, bool Down) {
+    if(Up) {
+        camera_tz -= CAMERA_TRANSLATION_STEP;
+    } else {
+        camera_tz += CAMERA_TRANSLATION_STEP;
+    }
+    needs_rendering = true;
+}
+
+void CAvatar::OnResize(int w, int h) {
+    window_width = w;
+    window_height = h;
+
+    SDL_FreeSurface(sdl_pimage);
+    sdl_pimage = SDL_SetVideoMode(window_width, window_height, SDL_DEPTH, SDL_VIDEO_MODE_OPTIONS);
+
+    glViewport(0, 0, window_width, window_height);
+
+    camera_aspect_ratio = ((float) window_width)/((float) window_height);
+    SetPerspectiveProjectionMatrix();
+
+    needs_rendering = true;
+}
+
+void CAvatar::SwitchDisplayStream() {
+    if(mode_sensor) {
+        InitSceneConstants();
+        if(sensor.active_stream == color_stream) {
+            // Passage en vue de profondeur
+            SetPerspectiveProjectionMatrix();
+            sensor.active_stream = depth_stream;
+        } else {
+            // Passage en vue caméra couleur
+            SetOrthoProjectionMatrix();
+            sensor.active_stream = color_stream;
+        }
+    }
 }
 
 void CAvatar::OnKeyDown(SDLKey sym, SDLMod mod, Uint16 unicode) {
@@ -279,49 +397,10 @@ void CAvatar::OnKeyDown(SDLKey sym, SDLMod mod, Uint16 unicode) {
         camera_tz += CAMERA_TRANSLATION_STEP;
         needs_rendering = true;
         break;
+    case SDLK_f:
+            SwitchDisplayStream();
+            break;
     }
-}
-
-void CAvatar::OnMouseMove(int mX, int mY, int relX, int relY, bool Left, bool Right, bool Middle) {
-    if(Left) {
-        // Translation
-        camera_tx -= CAMERA_TRANSLATION_STEP*relX/16;
-        camera_ty += CAMERA_TRANSLATION_STEP*relY/16;
-    }
-    if(Right) {
-        // Rotation
-        world_rx += SCENE_ROTATION_STEP*relY/16;
-        if(world_rx > 360 || world_rx < -360)
-            world_rx = 0;
-        world_ry += SCENE_ROTATION_STEP*relX/16;
-        if(world_ry > 360 || world_ry < -360)
-            world_ry = 0;
-    }
-    needs_rendering = true;
-}
-
-void CAvatar::OnMouseWheel(bool Up, bool Down) {
-    if(Up) {
-        camera_tz -= CAMERA_TRANSLATION_STEP;
-    } else {
-        camera_tz += CAMERA_TRANSLATION_STEP;
-    }
-    needs_rendering = true;
-}
-
-void CAvatar::OnResize(int w, int h) {
-    window_width = w;
-    window_height = h;
-
-    SDL_FreeSurface(sdl_pimage);
-    sdl_pimage = SDL_SetVideoMode(window_width, window_height, SDL_DEPTH, SDL_VIDEO_MODE_OPTIONS);
-
-    glViewport(0, 0, window_width, window_height);
-
-    camera_aspect_ratio = ((float) window_width)/((float) window_height);
-    InitProjectionMatrix();
-
-    needs_rendering = true;
 }
 
 void CAvatar::OnExpose()

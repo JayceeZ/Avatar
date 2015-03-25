@@ -3,6 +3,7 @@
 
 #include <SDL/SDL.h>
 #include "events.h"
+#include "sensor.h"
 
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -17,45 +18,58 @@
 class CAvatar : public CEvent
 {
 
-bool should_be_running;  //!< Used to quit the infinite process loop
-bool needs_rendering;    //!< Set to true when we want to rerender the object
-int window_width;        //!< Give the window width available to display the Avatar
-int window_height;       //!< Give the window height available to display the Avatar
-const char* window_title;//!< Title of the execution window displaying the Avatar
+private:
+    bool should_be_running;  //!< Used to quit the infinite process loop
+    bool mode_sensor;
+    bool needs_rendering;    //!< Set to true when we want to rerender the object
 
-float world_origin_x;    //!< Define the world origin x point value
-float world_origin_y;    //!< origin point y value
-float world_origin_z;    //!< origin point z value
-float world_rx;          //!< rotation to apply to x
-float world_ry;          //!< rotation to apply to y
+    int window_width;        //!< Give the window width available to display the Avatar
+    int window_height;       //!< Give the window height available to display the Avatar
+    const char* window_title;//!< Title of the execution window displaying the Avatar
 
-float camera_aspect_ratio;
+    float world_origin_x;    //!< Define the world origin x point value
+    float world_origin_y;    //!< origin point y value
+    float world_origin_z;    //!< origin point z value
+    float world_rx;          //!< rotation to apply to x
+    float world_ry;          //!< rotation to apply to y
 
-float camera_min_tz;
-float camera_min_z;     //!< limit
-float camera_max_z;
+    float camera_aspect_ratio;
 
-float camera_fovy;
+    float camera_min_tz;
+    float camera_min_z;     //!< limit
+    float camera_max_z;
 
-float camera_tx;
-float camera_ty;
-float camera_tz;
+    float camera_fovy;
 
-void InitProjectionMatrix();
+    float camera_tx;
+    float camera_ty;
+    float camera_tz;
 
-SDL_Surface* sdl_pimage;
-SDL_Surface* surface_test;
-SDL_Surface* surface_test2;
+    void SetPerspectiveProjectionMatrix();
+    void SetOrthoProjectionMatrix();
 
-GLuint texture_test_id;
-GLuint texture_test2_id;
+    void InitModeDemo();
+    void DrawDemo();
+
+    void InitModeSensor();
+    void DrawSensor();
+    void SwitchDisplayStream();
+
+    SDL_Surface* sdl_pimage;
+    SDL_Surface* surface_test;
+    SDL_Surface* surface_test2;
+
+    GLuint texture_test_id;
+    GLuint texture_test2_id;
+
+    CSensor sensor;
 
 public:
     CAvatar();
     ~CAvatar();
-    int OnExecute();
+    int OnExecute(bool with_sensor);
 
-    bool OnInit();
+    bool OnInit(bool with_sensor);
 
     void OnCleanup();
     void OnLoop();
