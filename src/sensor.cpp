@@ -22,9 +22,6 @@ bool CSensor::OnInit(bool show_color_stream) {
         return false;
     }
 
-    m_device.setImageRegistrationMode(openni::IMAGE_REGISTRATION_DEPTH_TO_COLOR);
-    m_device.setDepthColorSyncEnabled(true);
-
     if(m_colorStream.create(m_device, openni::SENSOR_COLOR) == openni::STATUS_OK) {
         m_colorStream.start();
     } else {
@@ -47,6 +44,12 @@ bool CSensor::OnInit(bool show_color_stream) {
     } else {
         return false;
     }
+
+    if(m_device.isImageRegistrationModeSupported(openni::IMAGE_REGISTRATION_DEPTH_TO_COLOR)) {
+        m_device.setImageRegistrationMode(openni::IMAGE_REGISTRATION_DEPTH_TO_COLOR);
+    }
+    // à mettre si on veut synchroniser les images couleur et de profondeur
+    //m_device.setDepthColorSyncEnabled(true);
 
     return true;
 }

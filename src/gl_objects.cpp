@@ -149,18 +149,18 @@ void DrawCube(float origin_x, float origin_y, float origin_z, float half_side, G
 }
 
 void FillWindowWithTexture(GLuint texture_ID) {
+    glBindTexture(GL_TEXTURE_2D, texture_ID);
     glBegin(GL_QUADS);
-        glBindTexture(GL_TEXTURE_2D, texture_ID);
         // front
         //glColor3f(1, 1, 1);
         //glNormal3f(0, 0, 1);
-        glTexCoord2f(0, 0);
-        glVertex2f(0, 0);      // bas-gauche
-        glTexCoord2f(1, 0);
-        glVertex2f(1, 0);      // bas-droite
         glTexCoord2f(1, 1);
-        glVertex2f(1, 1);      // haut-droite
+        glVertex2f(0, 0);      // bas-gauche
         glTexCoord2f(0, 1);
+        glVertex2f(1, 0);      // bas-droite
+        glTexCoord2f(0, 0);
+        glVertex2f(1, 1);      // haut-droite
+        glTexCoord2f(1, 0);
         glVertex2f(0, 1);      // haut-gauche
     glEnd();
 }

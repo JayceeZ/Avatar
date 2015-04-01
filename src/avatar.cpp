@@ -233,25 +233,69 @@ void CAvatar::DrawDemo() {
 void CAvatar::InitModeSensor() {
     // Initialisations des attributs pour sensor
     SetOrthoProjectionMatrix();
+    //glEnable(GL_DEPTH_TEST);
+    glEnable(GL_TEXTURE_2D);
 }
 
 void CAvatar::DrawSensor() {
-    // Untested code
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    openni::VideoFrameRef m_colorFrame;
-
+    openni::VideoFrameRef m_colorFrame, m_depthFrame;
     sensor.m_colorStream.readFrame(&m_colorFrame);
-    if(!m_colorFrame.isValid())
+    if(!m_colorFrame.isValid()) {
+        std::cout << "Color Frame Invalid" << std::endl;
         return;
+    }
 
     const openni::RGB888Pixel* pImage = (const openni::RGB888Pixel*) m_colorFrame.getData();
 
-    GLuint texture_id = Load2DTexture(m_colorFrame.getWidth(), m_colorFrame.getHeight(), 3, pImage);
-    FillWindowWithTexture(texture_id);
+    if(sensor.active_stream == color_stream) {
+        GLuint texture_id = Load2DTexture(m_colorFrame.getWidth(), m_colorFrame.getHeight(), 3, pImage);
+        FillWindowWithTexture(texture_id);
+        // destruction de la texture
+        glDeleteTextures(1, &texture_id);
+    } else {
+        sensor.m_depthStream.readFrame(&m_depthFrame);
+        if(!m_depthFrame.isValid()) {
+            std::cout << "Depth Frame Invalid" << std::endl;
+            return;
+        }
 
-    glDeleteTextures(1, &texture_id);
+        const openni::DepthPixel* pDepth = (const openni::DepthPixel*) m_depthFrame.getData();
+
+        int width = m_depthFrame.getWidth();
+        int height = m_depthFrame.getHeight();
+        //float min_depth = sensor.m_depthStream.getMinPixelValue();
+        //float max_depth = sensor.m_depthStream.getMaxPixelValue();
+
+        float pWorldX, pWorldY, pWorldZ;
+
+        glMatrixMode(GL_MODELVIEW);
+        glLoadIdentity();
+
+        glTranslatef(-camera_tx, -camera_ty, -camera_tz);
+        glRotatef(world_rx, 1, 0, 0);
+        glRotatef(world_ry, 0, 1, 0);
+
+        glEnable(GL_DEPTH_TEST);
+        glPointSize(2);
+
+        glBegin(GL_POINTS);
+
+        for(int y = 0; y < height; y++) {
+            for(int x = 0; x < width; x++) {
+                if((x%2 == 0) && (y%2 == 0) && (*pDepth != 0) && (*pDepth < 2000)) {
+                    openni::CoordinateConverter::convertDepthToWorld(sensor.m_depthStream, x, y, *pDepth, &pWorldX, &pWorldY, &pWorldZ);
+                    glColor3f(pImage->r/255.0, pImage->g/255.0, pImage->b/255.0);
+                    glVertex3f(pWorldX/1000.0, pWorldY/1000.0, pWorldZ/1000.0);
+                }
+            }
+            pDepth++;
+            pImage++;
+        }
+
+        glEnd();
+    }
+
+    needs_rendering = true;
 }
 
 
@@ -313,7 +357,11 @@ void CAvatar::OnResize(int w, int h) {
     glViewport(0, 0, window_width, window_height);
 
     camera_aspect_ratio = ((float) window_width)/((float) window_height);
-    SetPerspectiveProjectionMatrix();
+    if(sensor.active_stream == color_stream) {
+        SetOrthoProjectionMatrix();
+    } else {
+        SetPerspectiveProjectionMatrix();
+    }
 
     needs_rendering = true;
 }
