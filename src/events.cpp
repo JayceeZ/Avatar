@@ -29,7 +29,7 @@ void CEvent::OnEvent(SDL_Event *Event) {
 
 void CEvent::OnKeyDown(SDLKey sym, SDLMod mod, Uint16 unicode) {}
 
-void CEvent::OnMouseWheel(bool Up, bool Down) {}
+void CEvent::OnMouseWheel(bool Up) {}
 void CEvent::OnMouseMove(int mX, int mY, int relX, int relY, bool Left,bool Right,bool Middle) {}
 
 void CEvent::OnResize(int w, int h) {}

@@ -37,10 +37,14 @@ bool CSensor::OnInit(bool show_color_stream) {
     }
 
     if(m_colorStream.isValid() && m_depthStream.isValid()) {
-        if(show_color_stream)
+        if(show_color_stream) {
             active_stream = color_stream;
-        else
+            std::cout << "Flux couleur" << std::endl;
+        }
+        else {
             active_stream = depth_stream;
+            std::cout << "Flux de profondeur" << std::endl;
+        }
     } else {
         return false;
     }
@@ -48,8 +52,15 @@ bool CSensor::OnInit(bool show_color_stream) {
     if(m_device.isImageRegistrationModeSupported(openni::IMAGE_REGISTRATION_DEPTH_TO_COLOR)) {
         m_device.setImageRegistrationMode(openni::IMAGE_REGISTRATION_DEPTH_TO_COLOR);
     }
-    // à mettre si on veut synchroniser les images couleur et de profondeur
-    //m_device.setDepthColorSyncEnabled(true);
 
     return true;
+}
+
+void CSensor::setColorDepthSync(bool value) {
+    m_device.setDepthColorSyncEnabled(value);
+
+    if(value)
+        std::cout << "Flux synchronisés" << std::endl;
+    else
+        std::cout << "Flux désynchronisés" << std::endl;
 }

@@ -21,6 +21,7 @@ public:
     ~CSensor();
 
     bool OnInit(bool show_color_stream);
+    void setColorDepthSync(bool value);
 };
 
 #endif // SENSOR_H

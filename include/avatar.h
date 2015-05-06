@@ -78,7 +78,7 @@ public:
     void OnEvent(SDL_Event* Event);
     void OnKeyDown(SDLKey sym, SDLMod mod, Uint16 unicode);
 
-    void OnMouseWheel(bool Up, bool Down);
+    void OnMouseWheel(bool Up);
     void OnMouseMove(int mX, int mY, int relX, int relY, bool Left,bool Right,bool Middle);
 
     void OnResize(int w, int h);

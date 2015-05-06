@@ -89,10 +89,6 @@ bool CAvatar::OnInit(bool with_sensor)
         return false;
     }
 
-    window_width = 640;
-    window_height = 480;
-    window_title = "Avatar Main Window";
-
     SDL_WM_SetCaption(window_title, 0);
 
     SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
@@ -113,6 +109,10 @@ bool CAvatar::OnInit(bool with_sensor)
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);
     */
 
+    window_width = 640;
+    window_height = 480;
+    window_title = "Avatar Main Window";
+
     sdl_pimage = SDL_SetVideoMode(window_width, window_height, SDL_DEPTH, SDL_VIDEO_MODE_OPTIONS);
 
     if(sdl_pimage == NULL) {
@@ -124,10 +124,10 @@ bool CAvatar::OnInit(bool with_sensor)
     glClearColor(0,0,0,0);
     glViewport(0,0,window_width, window_height);
 
-    // Paramètres caméra
+    // Paramètres caméra virtuelle
     camera_aspect_ratio = ((float) window_width) / ((float) window_height);
     camera_min_z = 0.1;
-    camera_max_z = 10;
+    camera_max_z = 50;
     camera_fovy = 60;
 
     if(with_sensor) {
@@ -187,13 +187,19 @@ void CAvatar::InitSceneConstants() {
 void CAvatar::InitModeDemo() {
     SetPerspectiveProjectionMatrix();
 
+    /*
     // Lumières
     glEnable(GL_LIGHTING);
     glShadeModel(GL_SMOOTH);
     glEnable(GL_LIGHT0);
+    */
 
-    // Texture test loading code
+    glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
+}
+
+void CAvatar::DrawDemo() {
+/*    // Texture test loading code
     if((surface_test = CSurface::OnLoad(TEST_TEXTURE1)) == NULL) {
         std::cout << "Test texture file have not been loaded correctly." << std::endl;
         return;
@@ -204,10 +210,6 @@ void CAvatar::InitModeDemo() {
         return;
     }
     texture_test2_id = Load2DTexture(surface_test2->w, surface_test2->h, surface_test2->format->BytesPerPixel, surface_test2->pixels);
-}
-
-void CAvatar::DrawDemo() {
-    glEnable(GL_DEPTH_TEST);
     //GLfloat scaling[] = {1, 0, 0, 0,
     //                     0, 1.5, 0, 0,
     //                     0, 0, 1, 0,
@@ -215,29 +217,80 @@ void CAvatar::DrawDemo() {
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
-    glTranslatef(-camera_tx, -camera_ty, -camera_tz);
-    glRotatef(world_rx, 1, 0, 0);
-    glRotatef(world_ry, 0, 1, 0);
+
     //glMultMatrixf(scaling);
 
     DrawFrame(world_origin_x, world_origin_y, world_origin_z, RDR_FRAME_LENGTH);
     GLuint textures[] = { texture_test_id, texture_test2_id };
+
     DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE, textures);
 
     // Lumière
     GLfloat light_position[] = { 0.0, 0.0, 10.0, 1.0 };
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+    */
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glTranslatef(-camera_tx, -camera_ty, -camera_tz);
+    glRotatef(world_rx, 1, 0, 0);
+    glRotatef(world_ry, 0, 1, 0);
+
+    int longueurMorceau = 2;
+    // Dessin biceps
+    DrawFrame(world_origin_x, world_origin_y, world_origin_z, RDR_FRAME_LENGTH);
+    glRotatef(20, -1, 0, 0);    // Rotation de l'épaule
+    glTranslatef(0, -longueurMorceau/2, 0); // Translation pour rotation (l'épaule)
+
+    glPushMatrix();
+    glScalef(1, longueurMorceau, 1);
+    DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE);     // Dessiner cube à l'origine
+    glPopMatrix();
+
+    // Dessin avant bras
+    glTranslatef(0, -longueurMorceau/2, 0); // Translation pour laisser la place au morceau suivant
+    glRotatef(45, -1, 0, 0);    // Rotation du coude
+    glTranslatef(0, -longueurMorceau/2, 0); // Translation pour rotation (le coude)
+
+    glPushMatrix();
+    glScalef(1, longueurMorceau, 1);
+    DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE);     // Dessiner cube à l'origine
+    glPopMatrix();
+
+    // Dessin avant main
+    float longueurMain = 1.0;
+    glTranslatef(0, -longueurMorceau/2, 0); // Translation pour laisser la place au morceau suivant
+    glRotatef(20, -1, 0, 0);    // Rotation de la main
+    glTranslatef(0, -longueurMain/2, 0); // Translation pour rotation (le poignet)
+
+    glPushMatrix();
+    glScalef(1, 1, 0.5);
+    DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE);     // Dessiner cube à l'origine
+    glPopMatrix();
+
 }
 
 
 void CAvatar::InitModeSensor() {
     // Initialisations des attributs pour sensor
-    SetOrthoProjectionMatrix();
-    //glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
+    glEnable(GL_DEPTH_TEST);
+
+    SDL_SetVideoMode(sensor.m_colorStream.getVideoMode().getResolutionX(), sensor.m_colorStream.getVideoMode().getResolutionY(), SDL_DEPTH, SDL_VIDEO_MODE_OPTIONS);
+
+    // Paramètres caméra réelle
+    //camera_aspect_ratio = ((float) window_width) / ((float) window_height);
+    camera_aspect_ratio = (sensor.m_colorStream.getHorizontalFieldOfView()) / (sensor.m_colorStream.getVerticalFieldOfView());
+    camera_fovy = sensor.m_colorStream.getVerticalFieldOfView()*(180/3.14);
 }
 
 void CAvatar::DrawSensor() {
+    if(sensor.active_stream == color_stream) {
+        SetOrthoProjectionMatrix();
+    } else {
+        SetPerspectiveProjectionMatrix();
+    }
+
     openni::VideoFrameRef m_colorFrame, m_depthFrame;
     sensor.m_colorStream.readFrame(&m_colorFrame);
     if(!m_colorFrame.isValid()) {
@@ -263,8 +316,9 @@ void CAvatar::DrawSensor() {
 
         int width = m_depthFrame.getWidth();
         int height = m_depthFrame.getHeight();
-        //float min_depth = sensor.m_depthStream.getMinPixelValue();
-        //float max_depth = sensor.m_depthStream.getMaxPixelValue();
+        float min_depth = sensor.m_depthStream.getMinPixelValue();
+        float max_depth = sensor.m_depthStream.getMaxPixelValue();
+        float ratio = min_depth/max_depth;
 
         float pWorldX, pWorldY, pWorldZ;
 
@@ -275,24 +329,21 @@ void CAvatar::DrawSensor() {
         glRotatef(world_rx, 1, 0, 0);
         glRotatef(world_ry, 0, 1, 0);
 
-        glEnable(GL_DEPTH_TEST);
-        glPointSize(2);
-
-        glBegin(GL_POINTS);
 
         for(int y = 0; y < height; y++) {
             for(int x = 0; x < width; x++) {
-                if((x%2 == 0) && (y%2 == 0) && (*pDepth != 0) && (*pDepth < 2000)) {
+                if((x % 2 == 0) && (y % 2 == 0) && (*pDepth != 0) && (*pDepth < 2000)) {
                     openni::CoordinateConverter::convertDepthToWorld(sensor.m_depthStream, x, y, *pDepth, &pWorldX, &pWorldY, &pWorldZ);
+                    glPointSize(*pDepth/1000.0*3);
+        glBegin(GL_POINTS);
                     glColor3f(pImage->r/255.0, pImage->g/255.0, pImage->b/255.0);
-                    glVertex3f(pWorldX/1000.0, pWorldY/1000.0, pWorldZ/1000.0);
-                }
-            }
-            pDepth++;
-            pImage++;
-        }
-
+                    glVertex3f(pWorldX/1000.0, pWorldY/1000.0, -pWorldZ/1000.0); // prendre camera_tz en compte
         glEnd();
+                }
+                pDepth++;
+                pImage++;
+            }
+        }
     }
 
     needs_rendering = true;
@@ -338,7 +389,7 @@ void CAvatar::OnMouseMove(int mX, int mY, int relX, int relY, bool Left, bool Ri
     needs_rendering = true;
 }
 
-void CAvatar::OnMouseWheel(bool Up, bool Down) {
+void CAvatar::OnMouseWheel(bool Up) {
     if(Up) {
         camera_tz -= CAMERA_TRANSLATION_STEP;
     } else {
@@ -357,11 +408,6 @@ void CAvatar::OnResize(int w, int h) {
     glViewport(0, 0, window_width, window_height);
 
     camera_aspect_ratio = ((float) window_width)/((float) window_height);
-    if(sensor.active_stream == color_stream) {
-        SetOrthoProjectionMatrix();
-    } else {
-        SetPerspectiveProjectionMatrix();
-    }
 
     needs_rendering = true;
 }
@@ -371,13 +417,16 @@ void CAvatar::SwitchDisplayStream() {
         InitSceneConstants();
         if(sensor.active_stream == color_stream) {
             // Passage en vue de profondeur
-            SetPerspectiveProjectionMatrix();
             sensor.active_stream = depth_stream;
+            sensor.setColorDepthSync(true);
+            std::cout << "Flux de profondeur" << std::endl;
         } else {
             // Passage en vue caméra couleur
-            SetOrthoProjectionMatrix();
             sensor.active_stream = color_stream;
+            sensor.setColorDepthSync(false);
+            std::cout << "Flux couleur" << std::endl;
         }
+        needs_rendering = true;
     }
 }
 

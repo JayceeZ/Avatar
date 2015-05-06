@@ -19,8 +19,6 @@ void DrawFrame(float origin_x, float origin_y, float origin_z, float frame_lengt
 
 void DrawCube(float origin_x, float origin_y, float origin_z, float half_side)
 {
-    defineMaterialReflectionProperties();
-
     glBegin(GL_QUADS);
     // front
     glColor3f(0, 1, 0);
