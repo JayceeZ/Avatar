@@ -12,7 +12,6 @@ public:
 
     virtual void OnKeyDown(SDLKey sym, SDLMod mod, Uint16 unicode);
 
-    virtual void OnMouseWheel(bool Up);
     virtual void OnMouseMove(int mX, int mY, int relX, int relY, bool Left,bool Right,bool Middle);
 
     virtual void OnResize(int w, int h);

@@ -1,5 +1,11 @@
 #include "gl_objects.h"
+#include "surface.h"
+
 #include <GL/gl.h>
+#include <iostream>
+#include <vector>
+
+#define TEST_TEXTURE "../images/companion_cube_face.bmp"
 
 void DrawFrame(float origin_x, float origin_y, float origin_z, float frame_length) {
     glBegin(GL_LINES);
@@ -59,17 +65,16 @@ void DrawCube(float origin_x, float origin_y, float origin_z, float half_side)
     glEnd();
 }
 
-void DrawCube(float origin_x, float origin_y, float origin_z, float half_side, GLuint texture_IDs[])
+void DrawCube(float origin_x, float origin_y, float origin_z, float half_side, GLuint texture_ID)
 {
-    defineMaterialReflectionProperties();
-
+    //defineMaterialReflectionProperties();
     //glTexEnvi(GL_TEXTURE_2D, GL_2D, GL_REPLACE);
 
-    glBindTexture(GL_TEXTURE_2D, texture_IDs[0]);
+    glBindTexture(GL_TEXTURE_2D, texture_ID);
     glBegin(GL_QUADS);
         // front
-        //glColor3f(1, 1, 1);
         glNormal3f(0, 0, 1);
+        glColor3f(1, 1, 1);
         glTexCoord2f(1, 1);    // haut-droite
         glVertex3f(origin_x+half_side, origin_y-half_side, origin_z+half_side);
         glTexCoord2f(1, 0);    // bas-droite
@@ -114,11 +119,6 @@ void DrawCube(float origin_x, float origin_y, float origin_z, float half_side, G
         glVertex3f(origin_x+half_side, origin_y-half_side, origin_z+half_side);
         glTexCoord2f(1, 1);
         glVertex3f(origin_x+half_side, origin_y-half_side, origin_z-half_side);
-    glEnd();
-
-    glBindTexture(GL_TEXTURE_2D, texture_IDs[1]);
-
-    glBegin(GL_QUADS);
 
         // top
         glNormal3f(0, 1, 0);
@@ -144,6 +144,85 @@ void DrawCube(float origin_x, float origin_y, float origin_z, float half_side, G
         glTexCoord2f(1, 1);
         glVertex3f(origin_x+half_side, origin_y-half_side, origin_z-half_side);
     glEnd();
+}
+
+void DrawAvatar(float origin_x, float origin_y, float origin_z, int shoulderTwist, int elbowTwist, int wristTwist, GLuint texture) {
+    glPushMatrix();
+    glTranslatef(-2, 0, 0);
+    DrawArm(origin_x, origin_y, origin_z, shoulderTwist, elbowTwist, wristTwist, false);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(2, 0, 0);
+    DrawArm(origin_x, origin_y, origin_z, shoulderTwist, elbowTwist, wristTwist, true);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0, -2, 0);
+    DrawBody(origin_x, origin_y, origin_z);
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(0, 1, 0);
+    DrawHead(origin_x, origin_y, origin_z, texture);
+    glPopMatrix();
+}
+
+void DrawBody(float origin_x, float origin_y, float origin_z) {
+    glScalef(4, 4, 1);
+    DrawCube(origin_x, origin_y, origin_z, 0.5);
+}
+
+GLuint loadTexture() {
+    SDL_Surface* surface_test;
+
+    GLuint texture;
+
+    if((surface_test = CSurface::OnLoad(TEST_TEXTURE)) == NULL) {
+        std::cout << "Error loading texture " <<  TEST_TEXTURE << ", aborting texturing" << std::endl;
+        return NULL;
+    }
+    texture = Load2DTexture(surface_test->w, surface_test->h, surface_test->format->BytesPerPixel, surface_test->pixels);
+
+    return texture;
+}
+
+void DrawHead(float origin_x, float origin_y, float origin_z, GLuint texture) {
+    glScalef(2, 2, 2);
+    DrawCube(origin_x, origin_y, origin_z, 0.5, texture);
+}
+
+void DrawArm(float origin_x, float origin_y, float origin_z, int shoulderTwist, int elbowTwist, int wristTwist, bool mirror) {
+    int longueurMorceau = 2;
+    // Dessin biceps
+    glRotatef(shoulderTwist, -1, 0, 0);    // Rotation de l'épaule
+    glTranslatef(0, -longueurMorceau/2, 0); // Translation pour rotation (l'épaule)
+
+    glPushMatrix();
+    glScalef(1, longueurMorceau, 1);
+    DrawCube(origin_x, origin_x, origin_x, 0.5);     // Dessiner cube à l'origine
+    glPopMatrix();
+
+    // Dessin avant bras
+    glTranslatef(0, -longueurMorceau/2, 0); // Translation pour laisser la place au morceau suivant
+    glRotatef(elbowTwist, -1, 0, 0);    // Rotation du coude
+    glTranslatef(0, -longueurMorceau/2, 0); // Translation pour rotation (le coude)
+
+    glPushMatrix();
+    glScalef(1, longueurMorceau, 1);
+    DrawCube(origin_x, origin_x, origin_x, 0.5);     // Dessiner cube à l'origine
+    glPopMatrix();
+
+    // Dessin avant main
+    float longueurMain = 1.0;
+    glTranslatef(0, -longueurMorceau/2, 0); // Translation pour laisser la place au morceau suivant
+    glRotatef(wristTwist, -1, 0, 0);    // Rotation de la main
+    glTranslatef(0, -longueurMain/2, 0); // Translation pour rotation (le poignet)
+
+    glPushMatrix();
+    glScalef(1, 1, 0.5);
+    DrawCube(origin_x, origin_x, origin_x, 0.5);     // Dessiner cube à l'origine
+    glPopMatrix();
 }
 
 void FillWindowWithTexture(GLuint texture_ID) {

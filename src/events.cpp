@@ -11,13 +11,6 @@ void CEvent::OnEvent(SDL_Event *Event) {
     case SDL_MOUSEMOTION:
         OnMouseMove(Event->motion.x,Event->motion.y,Event->motion.xrel,Event->motion.yrel,(Event->motion.state&SDL_BUTTON(SDL_BUTTON_LEFT))!=0,(Event->motion.state&SDL_BUTTON(SDL_BUTTON_RIGHT))!=0,(Event->motion.state&SDL_BUTTON(SDL_BUTTON_MIDDLE))!=0);
         break;
-    /*case SDL_MOUSEBUTTONUP:
-        if(Event->button.which)
-            OnMouseWheel(Event->button.x, Event->button.y);
-        break;
-    case SDL_MOUSEBUTTONDOWN:
-        OnMouseWheel(Event->button.x, Event->button.y);
-        break;*/
     case SDL_VIDEORESIZE:
         OnResize(Event->resize.w, Event->resize.h);
         break;
@@ -29,7 +22,6 @@ void CEvent::OnEvent(SDL_Event *Event) {
 
 void CEvent::OnKeyDown(SDLKey sym, SDLMod mod, Uint16 unicode) {}
 
-void CEvent::OnMouseWheel(bool Up) {}
 void CEvent::OnMouseMove(int mX, int mY, int relX, int relY, bool Left,bool Right,bool Middle) {}
 
 void CEvent::OnResize(int w, int h) {}

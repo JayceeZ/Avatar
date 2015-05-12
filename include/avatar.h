@@ -9,6 +9,8 @@
 #include <GL/gl.h>
 #include <GL/glu.h>
 
+#include <vector>
+
 //! The Avatar Object Class
 /*!
  * \brief The CAvatar class
@@ -49,6 +51,9 @@ private:
     void SetOrthoProjectionMatrix();
 
     void InitModeDemo();
+    int shoulderTwist;
+    int elbowTwist;
+    int wristTwist;
     void DrawDemo();
 
     void InitModeSensor();
@@ -56,11 +61,8 @@ private:
     void SwitchDisplayStream();
 
     SDL_Surface* sdl_pimage;
-    SDL_Surface* surface_test;
-    SDL_Surface* surface_test2;
 
-    GLuint texture_test_id;
-    GLuint texture_test2_id;
+    GLuint texture;
 
     CSensor sensor;
 
@@ -78,7 +80,6 @@ public:
     void OnEvent(SDL_Event* Event);
     void OnKeyDown(SDLKey sym, SDLMod mod, Uint16 unicode);
 
-    void OnMouseWheel(bool Up);
     void OnMouseMove(int mX, int mY, int relX, int relY, bool Left,bool Right,bool Middle);
 
     void OnResize(int w, int h);

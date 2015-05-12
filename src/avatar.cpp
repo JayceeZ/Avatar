@@ -1,5 +1,4 @@
 #include "avatar.h"
-#include "surface.h"
 #include "gl_objects.h"
 #include <iostream>
 
@@ -10,11 +9,10 @@
 #define CAMERA_Z_OFFSET 2
 #define CAMERA_TRANSLATION_STEP 0.1
 
+#define TWIST_STEP 5
+
 #define RDR_FRAME_LENGTH 1
 #define RDR_CUBE_HALF_SIDE 0.5
-
-#define TEST_TEXTURE1 "../images/companion_cube_face.bmp"
-#define TEST_TEXTURE2 "../images/companion_cube_face2.bmp"
 
 CAvatar::CAvatar() {
     should_be_running = false;
@@ -41,11 +39,10 @@ CAvatar::CAvatar() {
 
     camera_min_tz = 0;
 
-    // Texture de test
-    surface_test = NULL;
-    surface_test2 = NULL;
-    texture_test_id = 0;
-    texture_test2_id = 0;
+    // Avatar members
+    shoulderTwist = 0;
+    elbowTwist = 0;
+    wristTwist = 0;
 
     // Mode
     mode_sensor = false;
@@ -187,48 +184,26 @@ void CAvatar::InitSceneConstants() {
 void CAvatar::InitModeDemo() {
     SetPerspectiveProjectionMatrix();
 
-    /*
-    // Lumières
+/*
+    // Lumière
     glEnable(GL_LIGHTING);
     glShadeModel(GL_SMOOTH);
     glEnable(GL_LIGHT0);
-    */
+*/
+
+    texture = loadTexture();
+    camera_tz += 10;
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
 }
 
 void CAvatar::DrawDemo() {
-/*    // Texture test loading code
-    if((surface_test = CSurface::OnLoad(TEST_TEXTURE1)) == NULL) {
-        std::cout << "Test texture file have not been loaded correctly." << std::endl;
-        return;
-    }
-    texture_test_id = Load2DTexture(surface_test->w, surface_test->h, surface_test->format->BytesPerPixel, surface_test->pixels);
-    if((surface_test2 = CSurface::OnLoad(TEST_TEXTURE2)) == NULL) {
-        std::cout << "Test texture file 2 have not been loaded correctly." << std::endl;
-        return;
-    }
-    texture_test2_id = Load2DTexture(surface_test2->w, surface_test2->h, surface_test2->format->BytesPerPixel, surface_test2->pixels);
-    //GLfloat scaling[] = {1, 0, 0, 0,
-    //                     0, 1.5, 0, 0,
-    //                     0, 0, 1, 0,
-    //                     0, 0, 0, 1};
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-
-    //glMultMatrixf(scaling);
-
-    DrawFrame(world_origin_x, world_origin_y, world_origin_z, RDR_FRAME_LENGTH);
-    GLuint textures[] = { texture_test_id, texture_test2_id };
-
-    DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE, textures);
-
+/*
     // Lumière
-    GLfloat light_position[] = { 0.0, 0.0, 10.0, 1.0 };
+    GLfloat light_position[] = { 0.0, 0.0, 100.0, 1.0 };
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-    */
+*/
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -236,38 +211,8 @@ void CAvatar::DrawDemo() {
     glRotatef(world_rx, 1, 0, 0);
     glRotatef(world_ry, 0, 1, 0);
 
-    int longueurMorceau = 2;
-    // Dessin biceps
     DrawFrame(world_origin_x, world_origin_y, world_origin_z, RDR_FRAME_LENGTH);
-    glRotatef(20, -1, 0, 0);    // Rotation de l'épaule
-    glTranslatef(0, -longueurMorceau/2, 0); // Translation pour rotation (l'épaule)
-
-    glPushMatrix();
-    glScalef(1, longueurMorceau, 1);
-    DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE);     // Dessiner cube à l'origine
-    glPopMatrix();
-
-    // Dessin avant bras
-    glTranslatef(0, -longueurMorceau/2, 0); // Translation pour laisser la place au morceau suivant
-    glRotatef(45, -1, 0, 0);    // Rotation du coude
-    glTranslatef(0, -longueurMorceau/2, 0); // Translation pour rotation (le coude)
-
-    glPushMatrix();
-    glScalef(1, longueurMorceau, 1);
-    DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE);     // Dessiner cube à l'origine
-    glPopMatrix();
-
-    // Dessin avant main
-    float longueurMain = 1.0;
-    glTranslatef(0, -longueurMorceau/2, 0); // Translation pour laisser la place au morceau suivant
-    glRotatef(20, -1, 0, 0);    // Rotation de la main
-    glTranslatef(0, -longueurMain/2, 0); // Translation pour rotation (le poignet)
-
-    glPushMatrix();
-    glScalef(1, 1, 0.5);
-    DrawCube(world_origin_x, world_origin_y, world_origin_z, RDR_CUBE_HALF_SIDE);     // Dessiner cube à l'origine
-    glPopMatrix();
-
+    DrawAvatar(world_origin_x, world_origin_y, world_origin_z, shoulderTwist, elbowTwist, wristTwist, texture);
 }
 
 
@@ -389,15 +334,6 @@ void CAvatar::OnMouseMove(int mX, int mY, int relX, int relY, bool Left, bool Ri
     needs_rendering = true;
 }
 
-void CAvatar::OnMouseWheel(bool Up) {
-    if(Up) {
-        camera_tz -= CAMERA_TRANSLATION_STEP;
-    } else {
-        camera_tz += CAMERA_TRANSLATION_STEP;
-    }
-    needs_rendering = true;
-}
-
 void CAvatar::OnResize(int w, int h) {
     window_width = w;
     window_height = h;
@@ -495,8 +431,32 @@ void CAvatar::OnKeyDown(SDLKey sym, SDLMod mod, Uint16 unicode) {
         needs_rendering = true;
         break;
     case SDLK_f:
-            SwitchDisplayStream();
-            break;
+        SwitchDisplayStream();
+        break;
+    case SDLK_u:
+        shoulderTwist += TWIST_STEP;
+        needs_rendering = true;
+        break;
+    case SDLK_j:
+        shoulderTwist -= TWIST_STEP;
+        needs_rendering = true;
+        break;
+    case SDLK_i:
+        elbowTwist += TWIST_STEP;
+        needs_rendering = true;
+        break;
+    case SDLK_k:
+        elbowTwist -= TWIST_STEP;
+        needs_rendering = true;
+        break;
+    case SDLK_o:
+        wristTwist += TWIST_STEP;
+        needs_rendering = true;
+        break;
+    case SDLK_l:
+        wristTwist -= TWIST_STEP;
+        needs_rendering = true;
+        break;
     }
 }
 
