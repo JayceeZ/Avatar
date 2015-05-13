@@ -16,7 +16,7 @@
 
 CAvatar::CAvatar() {
     should_be_running = false;
-    needs_rendering = true;
+    needs_rendering = false;
 
     window_width = 0;
     window_height = 0;
@@ -57,6 +57,8 @@ int CAvatar::OnExecute(bool with_sensor) {
     }
 
     SDL_Event event;
+
+    // pour le maintient d'une touche
     SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
     should_be_running = true; 
@@ -117,7 +119,7 @@ bool CAvatar::OnInit(bool with_sensor)
         return false;
     }
 
-    // TODO: Determiner l'usage de ces deux fonctions
+    // Défini la valeur de la "gomme" opengl, nous on veut que effacer=noir
     glClearColor(0,0,0,0);
     glViewport(0,0,window_width, window_height);
 
@@ -167,11 +169,10 @@ void CAvatar::OnCleanup() {
 }
 
 void CAvatar::OnLoop()
-{
-
-}
+{}
 
 void CAvatar::InitSceneConstants() {
+    // valeurs initiales de la vue pour la représentation
     world_rx = 0;
     world_ry = 0;
 
@@ -205,13 +206,18 @@ void CAvatar::DrawDemo() {
     glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 */
 
+    // on dit à opengl que les matrices définies ci-après appartiennent à MODELVIEW (ce qui est observé)
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    glLoadIdentity(); // la matrice identité, à charger avant tout calcul matriciel pour être sûr que l'on calcul sur une matrice propre
+
+    // ces trois opérations de matrices sont effectuée à la fin donc pour avoir un rendu de notre modéle en fonction des attribut de camera
     glTranslatef(-camera_tx, -camera_ty, -camera_tz);
     glRotatef(world_rx, 1, 0, 0);
     glRotatef(world_ry, 0, 1, 0);
 
+    // dessine un repère orthonormé
     DrawFrame(world_origin_x, world_origin_y, world_origin_z, RDR_FRAME_LENGTH);
+    // dessine notre avatar
     DrawAvatar(world_origin_x, world_origin_y, world_origin_z, shoulderTwist, elbowTwist, wristTwist, texture);
 }
 
@@ -221,28 +227,34 @@ void CAvatar::InitModeSensor() {
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
 
+    // génération d'une fenêtre adaptée
     SDL_SetVideoMode(sensor.m_colorStream.getVideoMode().getResolutionX(), sensor.m_colorStream.getVideoMode().getResolutionY(), SDL_DEPTH, SDL_VIDEO_MODE_OPTIONS);
 
     // Paramètres caméra réelle
-    //camera_aspect_ratio = ((float) window_width) / ((float) window_height);
     camera_aspect_ratio = (sensor.m_colorStream.getHorizontalFieldOfView()) / (sensor.m_colorStream.getVerticalFieldOfView());
     camera_fovy = sensor.m_colorStream.getVerticalFieldOfView()*(180/3.14);
 }
 
 void CAvatar::DrawSensor() {
+    // on défini la matrice de projection selon nos besoins
     if(sensor.active_stream == color_stream) {
+        // le flux couleur n'ayant pas de notion de profondeur,
+        // on choisi de simplifier la projection des points sur le plan de la fenêtre
         SetOrthoProjectionMatrix();
     } else {
+        // sinon, le calcul de la projection en perspective est défini par les paramètres camera
         SetPerspectiveProjectionMatrix();
     }
 
     openni::VideoFrameRef m_colorFrame, m_depthFrame;
+
     sensor.m_colorStream.readFrame(&m_colorFrame);
     if(!m_colorFrame.isValid()) {
         std::cout << "Color Frame Invalid" << std::endl;
         return;
     }
 
+    // on dit que les données sont des pixels R=8bits G=8bits et B=8bits
     const openni::RGB888Pixel* pImage = (const openni::RGB888Pixel*) m_colorFrame.getData();
 
     if(sensor.active_stream == color_stream) {
@@ -257,6 +269,7 @@ void CAvatar::DrawSensor() {
             return;
         }
 
+        // on dit que les données sont des pixels de profondeurs
         const openni::DepthPixel* pDepth = (const openni::DepthPixel*) m_depthFrame.getData();
 
         int width = m_depthFrame.getWidth();
@@ -274,23 +287,27 @@ void CAvatar::DrawSensor() {
         glRotatef(world_rx, 1, 0, 0);
         glRotatef(world_ry, 0, 1, 0);
 
+        // on choisi une taille fixe pour nos points
+        glPointSize(2);
+        glBegin(GL_POINTS);
 
         for(int y = 0; y < height; y++) {
             for(int x = 0; x < width; x++) {
                 if((x % 2 == 0) && (y % 2 == 0) && (*pDepth != 0) && (*pDepth < 2000)) {
                     openni::CoordinateConverter::convertDepthToWorld(sensor.m_depthStream, x, y, *pDepth, &pWorldX, &pWorldY, &pWorldZ);
-                    glPointSize(*pDepth/1000.0*3);
-        glBegin(GL_POINTS);
+                    // on attribue la valeur de couleur du pixel image correspondant
                     glColor3f(pImage->r/255.0, pImage->g/255.0, pImage->b/255.0);
-                    glVertex3f(pWorldX/1000.0, pWorldY/1000.0, -pWorldZ/1000.0); // prendre camera_tz en compte
-        glEnd();
+                    // on dessine notre point
+                    glVertex3f(pWorldX/1000.0, pWorldY/1000.0, camera_tz-pWorldZ/1000.0);
                 }
                 pDepth++;
                 pImage++;
             }
         }
+        glEnd();
     }
 
+    // le needs_rendering n'est pas utilisé ici, mais si on veut, on pourrait limiter la fréquence de rafraîchissement avec
     needs_rendering = true;
 }
 
@@ -317,12 +334,12 @@ void CAvatar::OnEvent(SDL_Event* Event) {
 }
 
 void CAvatar::OnMouseMove(int mX, int mY, int relX, int relY, bool Left, bool Right, bool Middle) {
-    if(Left) {
+    if(Left) { // bouton gauche
         // Translation
         camera_tx -= CAMERA_TRANSLATION_STEP*relX/16;
         camera_ty += CAMERA_TRANSLATION_STEP*relY/16;
     }
-    if(Right) {
+    if(Right) { // bouton droit
         // Rotation
         world_rx += SCENE_ROTATION_STEP*relY/16;
         if(world_rx > 360 || world_rx < -360)
@@ -335,6 +352,7 @@ void CAvatar::OnMouseMove(int mX, int mY, int relX, int relY, bool Left, bool Ri
 }
 
 void CAvatar::OnResize(int w, int h) {
+    // au redimensionnement, on redéfinie la fenêtre comme dans le OnInit
     window_width = w;
     window_height = h;
 
@@ -343,12 +361,14 @@ void CAvatar::OnResize(int w, int h) {
 
     glViewport(0, 0, window_width, window_height);
 
-    camera_aspect_ratio = ((float) window_width)/((float) window_height);
+    if(!mode_sensor)
+        camera_aspect_ratio = ((float) window_width)/((float) window_height);
 
     needs_rendering = true;
 }
 
 void CAvatar::SwitchDisplayStream() {
+    // uniquement en mode sensor
     if(mode_sensor) {
         InitSceneConstants();
         if(sensor.active_stream == color_stream) {

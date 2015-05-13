@@ -9,14 +9,17 @@
 
 void DrawFrame(float origin_x, float origin_y, float origin_z, float frame_length) {
     glBegin(GL_LINES);
+    // axe x
     glColor3f(1,0,0);
     glVertex3f(origin_x,origin_y,origin_z);
     glVertex3f(origin_x+frame_length, origin_y,origin_z);
 
-    glColor3f(0,0,1);
+    // axe y
+    glColor3f(0,1,0);
     glVertex3f(origin_x, origin_y, origin_z);
     glVertex3f(origin_x, origin_y+frame_length, origin_z);
 
+    // axe z
     glColor3f(0,0,1);
     glVertex3f(origin_x, origin_y, origin_z);
     glVertex3f(origin_x, origin_y, origin_z+frame_length);
@@ -147,30 +150,18 @@ void DrawCube(float origin_x, float origin_y, float origin_z, float half_side, G
 }
 
 void DrawAvatar(float origin_x, float origin_y, float origin_z, int shoulderTwist, int elbowTwist, int wristTwist, GLuint texture) {
-    glPushMatrix();
-    glTranslatef(-2, 0, 0);
-    DrawArm(origin_x, origin_y, origin_z, shoulderTwist, elbowTwist, wristTwist, false);
-    glPopMatrix();
-
-    glPushMatrix();
-    glTranslatef(2, 0, 0);
-    DrawArm(origin_x, origin_y, origin_z, shoulderTwist, elbowTwist, wristTwist, true);
-    glPopMatrix();
-
-    glPushMatrix();
-    glTranslatef(0, -2, 0);
-    DrawBody(origin_x, origin_y, origin_z);
-    glPopMatrix();
-
-    glPushMatrix();
-    glTranslatef(0, 1, 0);
-    DrawHead(origin_x, origin_y, origin_z, texture);
-    glPopMatrix();
+    DrawArm(origin_x-2, origin_y, origin_z, shoulderTwist, elbowTwist, wristTwist, false);
+    DrawArm(origin_x+2, origin_y, origin_z, shoulderTwist, elbowTwist, wristTwist, true);
+    DrawBody(origin_x, origin_y-2, origin_z);
+    DrawHead(origin_x, origin_y+1, origin_z, texture);
 }
 
 void DrawBody(float origin_x, float origin_y, float origin_z) {
+    glPushMatrix();
+    glTranslatef(origin_x, origin_y, origin_z);
     glScalef(4, 4, 1);
-    DrawCube(origin_x, origin_y, origin_z, 0.5);
+    DrawCube(0, 0, 0, 0.5);
+    glPopMatrix();
 }
 
 GLuint loadTexture() {
@@ -188,19 +179,30 @@ GLuint loadTexture() {
 }
 
 void DrawHead(float origin_x, float origin_y, float origin_z, GLuint texture) {
+    // on met la matrice de calcul en cours de coté dans la pile
+    glPushMatrix();
+    glTranslatef(origin_x, origin_y, origin_z);
     glScalef(2, 2, 2);
-    DrawCube(origin_x, origin_y, origin_z, 0.5, texture);
+    DrawCube(0, 0, 0, 0.5, texture);
+    glPopMatrix();
+    // on récupére notre précédente matrice
+
+    // ceci a pour but de rendre totalement indépendants les calculs que nous ne voulont appliquer que sur notre cube
+    // et éviter qu'ils ne s'appliquent au reste de nos objets puisques ces calculs n'ont pas été appliqué à la matrice mise de côté
 }
 
 void DrawArm(float origin_x, float origin_y, float origin_z, int shoulderTwist, int elbowTwist, int wristTwist, bool mirror) {
     int longueurMorceau = 2;
+    glPushMatrix();
+    glTranslatef(origin_x, origin_y, origin_z);
+
     // Dessin biceps
     glRotatef(shoulderTwist, -1, 0, 0);    // Rotation de l'épaule
     glTranslatef(0, -longueurMorceau/2, 0); // Translation pour rotation (l'épaule)
 
     glPushMatrix();
     glScalef(1, longueurMorceau, 1);
-    DrawCube(origin_x, origin_x, origin_x, 0.5);     // Dessiner cube à l'origine
+    DrawCube(0, 0, 0, 0.5);     // Dessiner cube à l'origine
     glPopMatrix();
 
     // Dessin avant bras
@@ -210,18 +212,17 @@ void DrawArm(float origin_x, float origin_y, float origin_z, int shoulderTwist, 
 
     glPushMatrix();
     glScalef(1, longueurMorceau, 1);
-    DrawCube(origin_x, origin_x, origin_x, 0.5);     // Dessiner cube à l'origine
+    DrawCube(0, 0, 0, 0.5);     // Dessiner cube à l'origine
     glPopMatrix();
 
-    // Dessin avant main
-    float longueurMain = 1.0;
+    // Dessin main
+    float longueurMain = 1;
     glTranslatef(0, -longueurMorceau/2, 0); // Translation pour laisser la place au morceau suivant
     glRotatef(wristTwist, -1, 0, 0);    // Rotation de la main
     glTranslatef(0, -longueurMain/2, 0); // Translation pour rotation (le poignet)
 
-    glPushMatrix();
     glScalef(1, 1, 0.5);
-    DrawCube(origin_x, origin_x, origin_x, 0.5);     // Dessiner cube à l'origine
+    DrawCube(0, 0, 0, 0.5);     // Dessiner cube à l'origine
     glPopMatrix();
 }
 
@@ -244,12 +245,16 @@ void FillWindowWithTexture(GLuint texture_ID) {
 
 GLuint Load2DTexture(GLsizei width, GLsizei height, int BytesPerPixel, const GLvoid* data) {
     GLuint texture_ID;
-    glGenTextures(1, &texture_ID);
-    glBindTexture(GL_TEXTURE_2D, texture_ID);
+    glGenTextures(1, &texture_ID); // on demande à opengl de nous donner (de reserver) un identifiant de texture
+    glBindTexture(GL_TEXTURE_2D, texture_ID); // on dit d'associer cette texture au traitements en cours
 
+    // pour certifier l'utilisabilité de cette texture (et la corriger si nécessaire)
+    // on définie à cette texture des filtres d'interpolation linéaire de façon à corriger
+    // des éventuels défauts de taille
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    // enfin, on écrit les données de pixels sur cette texture
     int color_mode = (BytesPerPixel == 3 ? GL_RGB : GL_RGBA);
     glTexImage2D(GL_TEXTURE_2D, 0, color_mode, width, height, 0, color_mode, GL_UNSIGNED_BYTE, data);
 
@@ -257,6 +262,8 @@ GLuint Load2DTexture(GLsizei width, GLsizei height, int BytesPerPixel, const GLv
 }
 
 void defineMaterialReflectionProperties() {
+    // pour les reflets, on définie les propriétés de réflexion du matériaux
+    // l'exemple ici est le bronze, ces valeurs n'ont pas été vérifiée
     float colorBronzeDiff[4] = { 0.8, 0.6, 0.0, 1.0 };
     float colorBronzeSpec[4] = { 1.0, 1.0, 0.4, 1.0 };
     GLfloat mat_emission[] = {0.1, 0.3, 0.2, 0.0};
